@@ -1,10 +1,7 @@
 pipeline:
   test:
-    image: node:6.9.5
-    environment:
-      - NODE_ENV=production
+    image: node:7
     commands:
-      - wget https://github.com/yarnpkg/yarn/releases/download/v0.16.1/yarn_0.16.1_all.deb && dpkg -i yarn_0.16.1_all.deb
       - yarn
       - yarn build
       - cp build/env.example.js build/env.js
@@ -33,7 +30,7 @@ pipeline:
     channel: deploys
     username: drone
     template: >
-      {{ build.author }} finished building <https://drone.sohohousedigital.com/SohoHouse/{{ repo.name }}/{{ build.number }}|{{ build.branch }} ({{ build.number }})> of *{{ repo.name }}*.
+      {{ build.author }} finished building <${DRONE_BUILD_LINK}|{{ build.branch }} ({{ build.number }})> of *{{ repo.name }}*.
 
 services:
   dind:
