@@ -1,0 +1,44 @@
+pipeline:
+  test:
+    image: node:6.9.5
+    environment:
+      - NODE_ENV=production
+    commands:
+      - wget https://github.com/yarnpkg/yarn/releases/download/v0.16.1/yarn_0.16.1_all.deb && dpkg -i yarn_0.16.1_all.deb
+      - yarn
+      - yarn build
+      - cp build/env.example.js build/env.js
+      - yarn test
+    volumes:
+      - /var/yarn-cache:/root/.yarn-cache
+
+  build_docker_image:
+    image: docker:1.12
+    environment:
+      - DOCKER_HOST=tcp://127.0.0.1:2375
+      - TAG=${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+      - DOCKER_LAUNCH_DEBUG=true
+    commands:
+      - docker login -u="${QUAY_USERNAME}" -p="${QUAY_PASSWORD}" quay.io
+      - docker build -t vue-renderer .
+      - docker tag vue-renderer quay.io/sohohouse/vue-renderer:latest
+      - docker tag vue-renderer quay.io/sohohouse/vue-renderer:${TAG}
+      - docker push quay.io/sohohouse/vue-renderer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+
+  slack:
+    image: plugins/slack
+    channel: deploys
+    username: drone
+    template: >
+      {{ build.author }} finished building <https://drone.sohohousedigital.com/SohoHouse/{{ repo.name }}/{{ build.number }}|{{ build.branch }} ({{ build.number }})> of *{{ repo.name }}*.
+
+services:
+  dind:
+    image: docker:1.12-dind
+    privileged: true
+    command:
+      - "-s"
+      - "overlay"
